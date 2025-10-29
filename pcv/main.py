@@ -1,21 +1,19 @@
 import cv2
 import time
+import numpy as np
 
-# URL dari Arduino IDE
-# IP harus sesuai dengan Serial Monitor Arduino IDE
-URL_STREAM = "http://192.168.137.56:81/stream" 
+# --- Import skrip anggota lain (INI PENTING) ---
+# Kita sekarang meng-import dan menggunakan skrip Anggota 2 & 3
+import scripts.preprocess as pp
+import scripts.segmentation as seg
+# --------------------------------------------------
 
-# --- (Opsional) Import skrip anggota lain (masih kosong/skeleton) ---
-# import scripts.preprocess as pp
-# import scripts.segmentation as seg
-# import scripts.find_objects as det    
-# import scripts.extract_features as feat
-
+# URL Stream ESP32-CAM
+URL_STREAM = "http://192.168.137.56:81/stream"  # <--- Pastikan IP ini masih valid
 
 print(f"Mencoba menyambung ke stream: {URL_STREAM}...")
 cap = cv2.VideoCapture(URL_STREAM)
 
-# Cek koneksi berhasil
 if not cap.isOpened():
     print("==============================================")
     print("Error: Tidak bisa membuka stream.")
@@ -26,10 +24,9 @@ if not cap.isOpened():
 print("Berhasil terhubung ke stream ESP32-CAM.")
 print("Tekan 'q' pada jendela video untuk keluar.")
 
-# Ini adalah 'main loop' aplikasi Anda
+
 while True:
     ret, frame = cap.read()
-
     if not ret:
         print("Error: Gagal mengambil frame. Mencoba menyambung kembali...")
         cap.release()
@@ -37,25 +34,29 @@ while True:
         time.sleep(1)
         continue
 
-    
+    # ----------------------------------------------------
+    # --- PIPELINE INTEGRASI MINGGU 2 (W2-P1) DIMULAI ---
+    # ----------------------------------------------------
+
     # 1. Panggil Anggota 2 (Preprocessing)
-    #    hsv_image = pp.clean_image(frame)
+    #    (Fungsi ini harusnya me-resize dan blur frame)
+    clean_frame = pp.clean_frame(frame)
     
     # 2. Panggil Anggota 3 (Segmentasi)
-    #    mask = seg.create_mask(hsv_image)
+    #    (Fungsi ini harusnya konversi ke HSV dan membuat mask hijau)
+    #    Outputnya adalah gambar BINER (hitam-putih)
+    mask = seg.create_leaf_mask(clean_frame)
+
+    # --- TUGAS W2-P1: Tampilkan Mask (Tujuan Utama) ---
+    # Ini adalah jendela debug baru untuk melihat hasil segmentasi
+    cv2.imshow("Mask Daun (Debug - W2-P1)", mask)
+
+    # ----------------------------------------------------
+    # --- AKHIR PIPELINE W2-P1 ---
+    # ----------------------------------------------------
     
-    # 3. Panggil Anggota 4 (Deteksi Objek)
-    #    coordinates = det.find_all_tomatoes(mask)
-    
-    # 4. Panggil Anggota 5 (Ekstraksi Fitur)
-    #    features = feat.get_features(hsv_image, coordinates)
-    
-    # 5. Visualisasikan (Tugas Anda nanti)
-    #    annotated_frame = draw_results(frame, coordinates, features)
-    
-    # --- Output W1-P2 ---
-    # Untuk minggu ini, kita hanya tampilkan frame aslinya
-    cv2.imshow("Live Feed ESP32-CAM (Yoga Pratama)", frame)
+    # Tampilkan hasil akhir ke pengguna (Video Asli)
+    cv2.imshow("Live Feed - Deteksi Daun (Anggota 6)", frame)
 
     # Cek jika tombol 'q' ditekan untuk keluar
     if cv2.waitKey(1) & 0xFF == ord('q'):
