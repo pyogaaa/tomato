@@ -5,7 +5,7 @@ import numpy as np
 # --- Import skrip anggota lain (INI PENTING) ---
 # Kita sekarang meng-import dan menggunakan skrip Anggota 2 & 3
 import pcv.scripts.prepocessing.preprocess as pp
-import scripts.segmentation as seg
+import scripts.segmentasi.segmentation as seg
 # --------------------------------------------------
 
 # URL Stream ESP32-CAM

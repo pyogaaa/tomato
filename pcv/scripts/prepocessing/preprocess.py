@@ -1,25 +1,46 @@
 import cv2
 import numpy as np
 
-# Tentukan ukuran standar untuk semua gambar
-TARGET_WIDTH = 640
-TARGET_HEIGHT = 480
-
-# Tentukan kernel untuk blurring
-BLUR_KERNEL = (5, 5)
-
-def clean_image(frame):
+def clean_frame(frame: np.ndarray, width: int = 640, height: int = 480, blur_ksize: tuple = (5, 5)) -> np.ndarray:
     """
-    Fungsi ini menerima frame mentah dari kamera dan melakukan
-    semua langkah preprocessing (Resize, Blur, BGR ke HSV).
+    Membersihkan frame dengan melakukan resize dan blur.
+    
+    Parameter:
+        frame (numpy.ndarray): Frame gambar yang akan diproses.
+        width (int): Lebar frame setelah di-resize. Default 640.
+        height (int): Tinggi frame setelah di-resize. Default 480.
+        blur_ksize (tuple): Ukuran kernel blur Gaussian. Default (5, 5).
+    
+    Return:
+        cleaned_frame (numpy.ndarray): Frame yang sudah diresize dan diblur.
     """
-    # 1. Resize Gambar
-    resized_frame = cv2.resize(frame, (TARGET_WIDTH, TARGET_HEIGHT))
+    if frame is None:
+        raise ValueError("Frame tidak boleh None.")
 
-    # 2. Noise Reduction (Blurring)
-    blurred_frame = cv2.GaussianBlur(resized_frame, BLUR_KERNEL, 0)
+    # Pastikan frame valid
+    if not isinstance(frame, np.ndarray):
+        raise TypeError("Input frame harus berupa array gambar (numpy.ndarray).")
 
-    # 3. Konversi Color Space (BGR ke HSV)
-    hsv_image = cv2.cvtColor(blurred_frame, cv2.COLOR_BGR2HSV)
+    # Resize frame ke ukuran tertentu
+    resized_frame = cv2.resize(frame, (width, height))  # pyright: ignore
 
-    return hsv_image
+    # Lakukan Gaussian blur untuk mengurangi noise
+    blurred_frame = cv2.GaussianBlur(resized_frame, blur_ksize, 0)  # pyright: ignore
+
+    return blurred_frame
+
+
+# ---- Contoh penggunaan langsung (bisa dihapus saat diimpor modul lain) ----
+if __name__ == "__main__":
+    # Perbaikan penamaan folder (dari prepocessing → preprocessing)
+    input_path = "scripts/preprocessing/daun_tomat.jpg"
+    output_path = "scripts/preprocessing/hasil_cleaned.jpg"
+
+    image = cv2.imread(input_path)
+
+    if image is None:
+        print(f"Gagal membaca gambar dari '{input_path}'. Pastikan file ada dan path benar.")
+    else:
+        cleaned = clean_frame(image)
+        cv2.imwrite(output_path, cleaned)
+        print(f"Frame berhasil diproses dan disimpan sebagai '{output_path}'.")
