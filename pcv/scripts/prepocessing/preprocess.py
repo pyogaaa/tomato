@@ -1,46 +1,33 @@
 import cv2
 import numpy as np
 
-def clean_frame(frame: np.ndarray, width: int = 640, height: int = 480, blur_ksize: tuple = (5, 5)) -> np.ndarray:
+def clean_frame(frame):
     """
-    Membersihkan frame dengan melakukan resize dan blur.
+    Membersihkan frame input dengan me-resize dan menerapkan Gaussian blur
+    untuk mengurangi noise.
     
-    Parameter:
-        frame (numpy.ndarray): Frame gambar yang akan diproses.
-        width (int): Lebar frame setelah di-resize. Default 640.
-        height (int): Tinggi frame setelah di-resize. Default 480.
-        blur_ksize (tuple): Ukuran kernel blur Gaussian. Default (5, 5).
-    
-    Return:
-        cleaned_frame (numpy.ndarray): Frame yang sudah diresize dan diblur.
+    Args:
+        frame: Gambar input (dari cv2.read())
+        
+    Returns:
+        Frame yang sudah bersih (resized dan blurred)
     """
-    if frame is None:
-        raise ValueError("Frame tidak boleh None.")
-
-    # Pastikan frame valid
-    if not isinstance(frame, np.ndarray):
-        raise TypeError("Input frame harus berupa array gambar (numpy.ndarray).")
-
-    # Resize frame ke ukuran tertentu
-    resized_frame = cv2.resize(frame, (width, height))  # pyright: ignore
-
-    # Lakukan Gaussian blur untuk mengurangi noise
-    blurred_frame = cv2.GaussianBlur(resized_frame, blur_ksize, 0)  # pyright: ignore
-
-    return blurred_frame
-
-
-# ---- Contoh penggunaan langsung (bisa dihapus saat diimpor modul lain) ----
-if __name__ == "__main__":
-    # Perbaikan penamaan folder (dari prepocessing → preprocessing)
-    input_path = "scripts/preprocessing/daun_tomat.jpg"
-    output_path = "scripts/preprocessing/hasil_cleaned.jpg"
-
-    image = cv2.imread(input_path)
-
-    if image is None:
-        print(f"Gagal membaca gambar dari '{input_path}'. Pastikan file ada dan path benar.")
+    
+    # 1. Resize frame agar pemrosesan lebih konsisten dan cepat
+    # Kita gunakan ukuran standar 640x480
+    width = 640
+    height = 480
+    dim = (width, height)
+    
+    # Lakukan resize hanya jika frame-nya ada
+    if frame is not None and frame.shape[0] > 0 and frame.shape[1] > 0:
+        resized_frame = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
     else:
-        cleaned = clean_frame(image)
-        cv2.imwrite(output_path, cleaned)
-        print(f"Frame berhasil diproses dan disimpan sebagai '{output_path}'.")
+        # Kembalikan frame kosong jika ada masalah
+        return np.zeros((height, width, 3), dtype=np.uint8)
+
+    # 2. Terapkan Gaussian Blur untuk mengurangi noise
+    # Kernel (5,5) adalah ukuran blur yang umum untuk noise reduction
+    blurred_frame = cv2.GaussianBlur(resized_frame, (5, 5), 0)
+    
+    return blurred_frame

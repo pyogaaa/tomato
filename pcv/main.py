@@ -6,10 +6,9 @@ import numpy as np
 # Kita sekarang meng-import dan menggunakan skrip Anggota 2 & 3
 import pcv.scripts.prepocessing.preprocess as pp
 import scripts.segmentasi.segmentation as seg
-# --------------------------------------------------
 
 # URL Stream ESP32-CAM
-URL_STREAM = "http://192.168.137.56:81/stream"  # <--- Pastikan IP ini masih valid
+URL_STREAM = "http://192.168.10.9:81/stream"  # <--- Pastikan IP ini masih valid
 
 print(f"Mencoba menyambung ke stream: {URL_STREAM}...")
 cap = cv2.VideoCapture(URL_STREAM)
@@ -38,18 +37,17 @@ while True:
     # --- PIPELINE INTEGRASI MINGGU 2 (W2-P1) DIMULAI ---
     # ----------------------------------------------------
 
-    # 1. Panggil Anggota 2 (Preprocessing)
-    #    (Fungsi ini harusnya me-resize dan blur frame)
+    # 1. Panggil Anggota 2 (Preprocessing) -> Sesuai Instruksi 1
+    #    (Fungsi ini me-resize dan blur frame)
     clean_frame = pp.clean_frame(frame)
     
-    # 2. Panggil Anggota 3 (Segmentasi)
-    #    (Fungsi ini harusnya konversi ke HSV dan membuat mask hijau)
-    #    Outputnya adalah gambar BINER (hitam-putih)
-    mask = seg.create_leaf_mask(clean_frame)
+    # 2. Panggil Anggota 3 (Segmentasi) -> Sesuai Instruksi 1
+    #    (Fungsi ini konversi ke HSV dan membuat mask hijau)
+    mask = seg.get_leaf_mask(clean_frame)  # <-- Memanggil fungsi get_leaf_mask
 
     # --- TUGAS W2-P1: Tampilkan Mask (Tujuan Utama) ---
-    # Ini adalah jendela debug baru untuk melihat hasil segmentasi
-    cv2.imshow("Mask Daun (Debug - W2-P1)", mask)
+    # Menampilkan jendela sesuai Instruksi 2
+    cv2.imshow("Mask Daun", mask)
 
     # ----------------------------------------------------
     # --- AKHIR PIPELINE W2-P1 ---
