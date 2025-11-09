@@ -1,12 +1,13 @@
 import cv2
 import numpy as np
 
-def get_symptom_mask(hsv_image):
+def get_symptom_mask(hsv_image, leaf_mask=None):
     """
     Mendeteksi gejala penyakit tanaman dari gambar HSV dan menghasilkan mask yang sudah dibersihkan.
     
     Args:
         hsv_image (numpy.ndarray): Gambar input dalam format HSV
+        leaf_mask (numpy.ndarray, optional): Mask daun untuk membatasi deteksi hanya di area daun
         
     Returns:
         numpy.ndarray: Mask biner (0-255) yang menunjukkan area gejala penyakit
@@ -29,6 +30,10 @@ def get_symptom_mask(hsv_image):
     
     # Apply morphological operations to clean the mask
     cleaned_mask = apply_morphological_operations(combined_mask)
+
+    # IMPLEMENTASI KRUSIAL: Bitwise AND dengan leaf_mask jika tersedia
+    if leaf_mask is not None:
+        cleaned_mask = cv2.bitwise_and(cleaned_mask, leaf_mask)
     
     return cleaned_mask
 
@@ -55,20 +60,53 @@ def apply_morphological_operations(mask):
     
     return cleaned_mask
 
-def calculate_symptom_percentage(mask):
+def calculate_symptom_percentage(symptom_mask, leaf_mask=None):
     """
     Menghitung persentase area gejala terhadap total area gambar.
     
     Args:
         mask (numpy.ndarray): Mask gejala
+         leaf_mask (numpy.ndarray, optional): Mask daun untuk perhitungan yang akurat
         
     Returns:
         float: Persentase area gejala (0-100)
     """
-    total_pixels = mask.shape[0] * mask.shape[1]
-    symptom_pixels = np.sum(mask > 0)
-    percentage = (symptom_pixels / total_pixels) * 100
+
+    if leaf_mask is not None:
+        # Hitung persentase terhadap area daun saja
+        leaf_area = np.sum(leaf_mask > 0)
+        symptom_pixels = np.sum(symptom_mask > 0)
+        percentage = (symptom_pixels / leaf_area) * 100 if leaf_area > 0 else 0
+    else:
+        total_pixels = symptom_mask.shape[0] * symptom_mask.shape[1]
+        symptom_pixels = np.sum(symptom_mask > 0)
+        percentage = (symptom_pixels / total_pixels) * 100
+
     return percentage
+
+def get_leaf_mask(image):
+    """
+    Mendapatkan mask daun dari gambar input.
+    
+    Args:
+        image (numpy.ndarray): Gambar input (BGR)
+        
+    Returns:
+        numpy.ndarray: Mask daun biner (0-255)
+    """
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Threshold untuk mendeteksi warna hijau daun
+    lower_green = np.array([25, 30, 30])
+    upper_green = np.array([90, 255, 255])
+    leaf_mask = cv2.inRange(hsv, lower_green, upper_green)
+    
+    # Cleaning mask dengan operasi morfologi
+    kernel = np.ones((5, 5), np.uint8)
+    leaf_mask = cv2.morphologyEx(leaf_mask, cv2.MORPH_CLOSE, kernel)
+    leaf_mask = cv2.morphologyEx(leaf_mask, cv2.MORPH_OPEN, kernel)
+    
+    return leaf_mask
 
 def visualize_detection(original_image, symptom_mask, percentage=None):
     """
@@ -123,13 +161,14 @@ def visualize_detection(original_image, symptom_mask, percentage=None):
     
     return result_image
 
-def detect_symptom_type(hsv_image, symptom_mask):
+def detect_symptom_type(hsv_image, symptom_mask, leaf_mask=None):
     """
     Mendeteksi jenis gejala berdasarkan warna dominan.
     
     Args:
         hsv_image (numpy.ndarray): Gambar HSV asli
         symptom_mask (numpy.ndarray): Mask gejala
+        leaf_mask (numpy.ndarray, optional): Mask daun untuk perhitungan persentase yang akurat
         
     Returns:
         dict: Informasi tentang jenis dan persentase setiap gejala
@@ -147,14 +186,22 @@ def detect_symptom_type(hsv_image, symptom_mask):
     # Clean individual masks
     brown_mask = apply_morphological_operations(brown_mask)
     yellow_mask = apply_morphological_operations(yellow_mask)
+
+    # IMPLEMENTASI KRUSIAL: Bitwise AND dengan leaf_mask jika tersedia
+    if leaf_mask is not None:
+        brown_mask = cv2.bitwise_and(brown_mask, leaf_mask)
+        yellow_mask = cv2.bitwise_and(yellow_mask, leaf_mask)
     
-    # Calculate percentages
-    total_pixels = symptom_mask.shape[0] * symptom_mask.shape[1]
+    # Calculate percentages - gunakan leaf_area jika tersedia, jika tidak gunakan total pixels
+    if leaf_mask is not None:
+        total_area = np.sum(leaf_mask > 0)
+    else:
+        total_area = symptom_mask.shape[0] * symptom_mask.shape[1]
     brown_pixels = np.sum(brown_mask > 0)
     yellow_pixels = np.sum(yellow_mask > 0)
     
-    brown_percentage = (brown_pixels / total_pixels) * 100
-    yellow_percentage = (yellow_pixels / total_pixels) * 100
+    brown_percentage = (brown_pixels / total_area) * 100 if total_area > 0 else 0
+    yellow_percentage = (yellow_pixels / total_area) * 100 if total_area > 0 else 0
     
     # Determine dominant symptom
     if brown_percentage > yellow_percentage:
@@ -185,14 +232,14 @@ if __name__ == "__main__":
     # Convert to HSV
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     
-    # Get symptom mask using the main function
-    symptom_mask = get_symptom_mask(hsv_image)
+    # Get symptom mask menggunakan fungsi yang sudah dimodifikasi
+    symptom_mask = get_symptom_mask(hsv_image, leaf_mask)  # Sekarang menerima leaf_mask
     
-    # Calculate symptom percentage
-    percentage = calculate_symptom_percentage(symptom_mask)
+    # Calculate symptom percentage dengan leaf_mask
+    percentage = calculate_symptom_percentage(symptom_mask, leaf_mask)
     
-    # Detect symptom types
-    symptom_info = detect_symptom_type(hsv_image, symptom_mask)
+    # Detect symptom types dengan leaf_mask
+    symptom_info = detect_symptom_type(hsv_image, symptom_mask, leaf_mask)
     
     # Create visualization
     result_visualization = visualize_detection(image, symptom_mask, percentage)
@@ -209,6 +256,7 @@ if __name__ == "__main__":
     
     # Show images
     cv2.imshow("Original Image", image)
+    cv2.imshow("Leaf Mask", leaf_mask)
     cv2.imshow("Symptom Mask", symptom_mask)
     cv2.imshow("Detection Result", result_visualization)
     
